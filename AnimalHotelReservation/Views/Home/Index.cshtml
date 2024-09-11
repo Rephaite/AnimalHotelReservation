@@ -1,0 +1,149 @@
+﻿@model HomeViewModel
+
+<h2>Available Rooms</h2>
+<table class="table">
+    <tr>
+        <th>Room Number</th>
+        <th>Type</th>
+        <th>Price</th>
+    </tr>
+    @foreach (var room in Model.AvailableRooms)
+    {
+        <tr>
+            <td>@room.Number</td>
+            <td>@room.Type</td>
+            <td>@room.Price.ToString("C")</td>
+        </tr>
+    }
+</table>
+
+<h2>Upcoming Reservations</h2>
+<table class="table">
+    <tr>
+        <th>Guest Name</th>
+        <th>Room Number</th>
+        <th>Check-In</th>
+        <th>Check-Out</th>
+    </tr>
+    @foreach (var reservation in Model.UpcomingReservations)
+    {
+        <tr>
+            <td>@reservation.Name</td>
+            <td>@reservation.Room.Number</td>
+            <td>@reservation.CheckIn.ToShortDateString()</td>
+            <td>@reservation.CheckOut.ToShortDateString()</td>
+        </tr>
+    }
+</table>
+@{
+    ViewData["Title"] = "Reservations Calendar";
+}
+
+<h2>Reservations Calendar</h2>
+
+<div id="calendar"></div>
+
+<div class="modal fade" id="reservationModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">New Reservation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="reservationForm">
+                    <div class="mb-3">
+                        <label for="guestName" class="form-label">Guest Name</label>
+                        <input type="text" class="form-control" id="guestName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="roomId" class="form-label">Room Number</label>
+                        <select class="form-select" id="roomId" required>
+                        </select>
+                    </div>
+                    <input type="hidden" id="checkInDate">
+                    <input type="hidden" id="checkOutDate">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveReservation">Save Reservation</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var calendarEl = document.getElementById('calendar');
+
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            events: '/Reservations/GetReservations',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            },
+            dateClick: function (info) {
+                
+                document.getElementById('checkInDate').value = info.dateStr;
+                document.getElementById('checkOutDate').value = info.dateStr;
+                
+                $('#reservationModal').modal('show');
+            }
+        });
+
+        calendar.render();
+
+        
+        document.getElementById('saveReservation').addEventListener('click', function () {
+            var guestName = document.getElementById('guestName').value;
+            var roomId = document.getElementById('roomId').value;
+            var checkIn = document.getElementById('checkInDate').value;
+            var checkOut = document.getElementById('checkOutDate').value;
+
+            var reservationData = {
+                GuestName: guestName,
+                RoomId: roomId,
+                CheckIn: checkIn,
+                CheckOut: checkOut
+            };
+
+            
+            fetch('/Reservations/CreateReservation', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(reservationData)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        
+                        $('#reservationModal').modal('hide');
+                        
+                        calendar.refetchEvents();
+                    } else {
+                        alert('Error saving reservation: ' + data.message);
+                    }
+                });
+        });
+
+        
+        fetch('/Rooms/GetAvailableRooms')
+            .then(response => response.json())
+            .then(data => {
+                var roomSelect = document.getElementById('roomId');
+                roomSelect.innerHTML = '';
+
+                data.forEach(function (room) {
+                    var option = document.createElement('option');
+                    option.value = room.id;
+                    option.text = room.number + ' (' + room.type + ')';
+                    roomSelect.appendChild(option);
+                });
+            });
+    });
+</script>

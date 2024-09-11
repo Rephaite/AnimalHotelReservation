@@ -1,0 +1,23 @@
+﻿@model IEnumerable<Room>
+
+<h2>Rooms</h2>
+
+<table class="table">
+    <tr>
+        <th>Number</th>
+        <th>Type</th>
+        <th>Price</th>
+        <th>Available</th>
+    </tr>
+    @foreach (var room in Model)
+    {
+        <tr>
+            <td>@room.Number</td>
+            <td>@room.Type</td>
+            <td>@room.Price</td>
+            <td>@room.IsAvailable</td>
+        </tr>
+    }
+</table>
+
+<a href="/Rooms/Create" class="btn btn-primary">Add Room</a>
